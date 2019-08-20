@@ -38,7 +38,7 @@ If Yamale can not find a schema it will tell you.
 Usage:
 
 ```bash
-usage: yamale [-h] [-s SCHEMA] [-n CPU_NUM] [-p PARSER] [PATH]
+usage: yamale [-h] [-s SCHEMA] [-n CPU_NUM] [-p PARSER] [--strict] [PATH]
 
 Validate yaml files.
 
@@ -54,6 +54,8 @@ optional arguments:
   -p PARSER, --parser PARSER
                         YAML library to load files. Choices are "ruamel" or
                         "pyyaml" (default).
+  --strict              Enable strict mode, unexpected elements in the data
+                        will not be accepted.
 ```
 
 ### API
@@ -184,9 +186,16 @@ person:
 ##### Adding external includes
 After you construct a schema you can add extra, external include definitions by calling `schema.add_include(dict)`. This method takes a dictionary and adds each key as another include.
 
+### Strict mode
+By default Yamale will not give any error for extra elements present in lists and maps that are not covered by the schema. With strict mode any additional element will give an error. Strict mode is enabled by passing the strict=True flag to the validate function.
+
+It is possible to mix strict and non-strict mode by setting the strict=True/False flag in the include validator, setting the option only for the included validators.
+
 Validators
 ----------
 Here are all the validators Yamale knows about. Every validator takes a `required` keyword telling Yamale whether or not that node must exist. By default every node is required. Example: `str(required=False)`
+
+You can also require that an optional value is not `None` by using the `none` keyword. By default Yamale will accept `None` as a valid value for a key that's not required. Reject `None` values with `none=False` in any validator. Example: `str(required=False, none=False)`.
 
 Some validators take keywords and some take arguments, some take both. For instance the `enum()` validator takes one or more constants as arguments and the `required` keyword: `enum('a string', 1, False, required=False)`
 
@@ -198,7 +207,21 @@ Validates strings.
     - `exclude`: Rejects strings that contains any character in the excluded value.
 
 Examples:
-- `str(max=10, exclude='?!')`: Allows only strings less than 10 characters that don't contain `?` or `!`.
+- `str(max=10, exclude='?!')`: Allows only strings less than 11 characters that don't contain `?` or `!`.
+
+### Regex - `regex([patterns], name=string, ignore_case=False, multiline=False, dotall=False)`
+Validates strings against one or more regular expressions.
+- arguments: one or more Python regular expression patterns
+- keywords:
+    - `name`: A friendly description for the patterns.
+    - `ignore_case`: Validates strings in a case-insensitive manner.
+    - `multiline`: `^` and `$` in a pattern match at the beginning and end of each line in a string in addition to matching at the beginning and end of the entire string. (A pattern matches at [the beginning of a string](https://docs.python.org/3/library/re.html#re.match) even in multiline mode; see below for a workaround.)
+    - `dotall`: `.` in a pattern matches newline characters in a validated string in addition to matching every character that *isn't* a newline.
+
+Examples:
+- `regex('^[^?!]{,10}$')`: Allows only strings less than 11 characters that don't contain `?` or `!`.
+- `regex(r'^(\d+)(\s\1)+$', name='repeated natural')`: Allows only strings that contain two or more identical digit sequences, each separated by a whitespace character. Non-matching strings like `sugar` are rejected with a message like `'sugar' is not a repeated natural.`
+- `regex('.*^apples$', multiline=True, dotall=True)`: Allows the string `apples` as well as multiline strings that contain the line `apples`.
 
 ### Integer - `int(min=int, max=int)`
 Validates integers.
@@ -262,6 +285,24 @@ run against its children nodes. A child validates if at least one validator pass
 Examples:
 - `map()`: Validates any map
 - `map(str(), int())`: Only validates maps whose children are strings or integers.
+
+### IP Address - `ip()`
+Validates IPv4 and IPv6 addresses.
+
+- keywords
+    - `version`: 4 or 6; explicitly force IPv4 or IPv6 validation
+
+Examples:
+- `ip()`: Allows any valid IPv4 or IPv6 address
+- `ip(version=4)`: Allows any valid IPv4 address
+- `ip(version=6)`: Allows any valid IPv6 address
+
+### MAC Address - `mac()`
+Validates MAC addresses.
+
+Examples:
+- `mac()`: Allows any valid MAC address
+
 
 ### Any - `any([validators])`
 Validates against a union of types. Use when a node can contain one of several types. It is valid if at least one of the listed validators is valid.
@@ -426,6 +467,7 @@ Yamale uses Travis to upload new tags to PyPi.
 To release a new version:
 
 1. Make a commit with the new version in `setup.py`.
-2. Run `make release`.
+1. Run tests for good luck.
+1. Run `make release`.
 
 Travis will take care of the rest.

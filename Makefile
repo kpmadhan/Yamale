@@ -16,8 +16,8 @@ clean:
 	@find . -name '__pycache__' -exec rm -fr {} +
 
 release:
-	@$(MAKE) test
 	@git tag $(VERSION)
-	@git push --follow-tags
+	@git push --follow-tags --all
+	@git push --tags
 
 .PHONY: test tag coverage clean release

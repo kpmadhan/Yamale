@@ -15,12 +15,13 @@ elif PY3:
 
 setup(
     name='yamale',
-    version='1.7.0',
+    version='2.0',
     url='https://github.com/23andMe/Yamale',
     author='Bo Lopker',
     author_email='blopker@23andme.com',
     description='A schema and validator for YAML.',
     long_description=readme,
+    long_description_content_type='text/markdown',
     license='MIT',
     packages=find_packages(),
     include_package_data=True,
